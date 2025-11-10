@@ -1,0 +1,11 @@
+batch_size: 64
+num_epochs: 5
+model_type: 'cnn' # 'cnn' or 'vt'
+cnn:
+  pretrained: true
+  learning_rate: 0.01
+  num_layers_to_drop: 2
+vision_transformer:
+  pretrained: true
+  learning_rate: 0.00001
+  num_encoder_layers_to_drop: 6
