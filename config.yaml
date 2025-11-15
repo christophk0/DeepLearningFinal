@@ -1,11 +1,15 @@
 batch_size: 64
 num_epochs: 5
-model_type: 'cnn' # 'cnn' or 'vt'
+print_batch_frequency: 10
+model_type: 'vt' # 'cnn' or 'vt'
+save_weights_path: ''
 cnn:
   pretrained: true
+  freeze_pretrained_layers: true
   learning_rate: 0.01
   num_layers_to_drop: 2
 vision_transformer:
   pretrained: true
+  freeze_pretrained_layers: true
   learning_rate: 0.00001
   num_encoder_layers_to_drop: 6

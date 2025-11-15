@@ -1,6 +1,7 @@
 import torch
 from torchvision import datasets, transforms
 import yaml
+import pprint
 
 from VisionTransormer import VisionTransformer
 from CNN import CNN
@@ -9,6 +10,7 @@ if __name__ == '__main__':
     device = torch.device(
         'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
     config = yaml.safe_load(open('config.yaml', 'r'))
+    pprint.pprint(config)
     num_epochs = config['num_epochs']
     if config['model_type'] == 'vt':
         model = VisionTransformer(config=config['vision_transformer'], device=device)
@@ -25,7 +27,9 @@ if __name__ == '__main__':
 
     for epoch in range(num_epochs):
         for batch_idx, batch in enumerate(training_loader):
-            model.training_step(batch, epoch, batch_idx, print_debug=(batch_idx % 50 == 0))
+            loss = model.training_step(batch)
+            if batch_idx % config['print_batch_frequency'] == 0:
+                print(f"Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item():.4f}")
         test_loss = 0
         correct = 0
         for batch_idx, batch in enumerate(test_loader):
@@ -35,6 +39,7 @@ if __name__ == '__main__':
         test_loss /= len(test_loader)
         correct /= len(test_data)
         print(f"Test Error for Epoch {epoch}: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-        test_loss = 0
-        correct = 0
-
+    save_weights = config['save_weights_path']
+    if save_weights != '':
+        torch.save(model.state_dict(), save_weights)
+        print("Weights saved to {save_weights}")

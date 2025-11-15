@@ -8,48 +8,58 @@ from torchvision.models import resnet18
 class CNN(nn.Module):
     def __init__(self, config, device):
         super().__init__()
+
         self.device = device
-        self.model = resnet18(
+
+        self.resnet = resnet18(
             weights=models.ResNet18_Weights.DEFAULT if config['pretrained'] else None).to(
             self.device)
         drop = config['num_layers_to_drop']
         if drop > 0:
-            self.model.layer4 = nn.Identity()
+            self.resnet.layer4 = nn.Identity()
             if drop > 1:
-                self.model.layer3 = nn.Identity()
+                self.resnet.layer3 = nn.Identity()
                 if drop > 2:
-                    self.model.layer2 = nn.Identity()
+                    self.resnet.layer2 = nn.Identity()
                     if drop > 3:
-                        self.model.layer1 = nn.Identity()
+                        self.resnet.layer1 = nn.Identity()
                         if drop > 4:
-                            self.model.layer0 = nn.Identity()
+                            self.resnet.layer0 = nn.Identity()
+        self.resnet.fc = nn.Identity().to(self.device)
+        self.freeze_pretrained_layers = config['freeze_pretrained_layers']
+        if self.freeze_pretrained_layers:
+            for param in self.resnet.parameters():
+                param.requires_grad = False
+        print(self.resnet)
 
+        self.final_layer = nn.LazyLinear(10).to(self.device)
 
-        self.model.fc = nn.LazyLinear(10).to(self.device)
-        print(self.model)
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=config['learning_rate'])
+        self.optimizer = optim.Adam(
+            self.final_layer.parameters() if self.freeze_pretrained_layers else self.parameters(),
+            lr=config['learning_rate'])
 
     def forward(self, x):
-        return self.model(x)
+        x = self.resnet(x)
+        return self.final_layer(x)
 
-    def training_step(self, batch, epoch, batch_idx, print_debug: bool = False):
-        self.model.train()
+    def training_step(self, batch):
+        self.train()
         data, target = batch
         data, target = data.to(self.device), target.to(self.device)
         self.optimizer.zero_grad()
-        output = self.model(data)
+        output = self.forward(data)
         loss = self.criterion(output, target)
         loss.backward()
         self.optimizer.step()
-        if print_debug:
-            print(f"Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item():.4f}")
+        return loss
 
     def test_step(self, batch):
-        self.model.eval()
-        data, target = batch
-        data, target = data.to(self.device), target.to(self.device)
-        pred = self.model(data)
-        test_loss = self.criterion(pred, target).item()
-        correct = (pred.argmax(1) == target).type(torch.float).sum().item()
-        return test_loss, correct
+        self.eval()
+        with torch.no_grad():
+            data, target = batch
+            data, target = data.to(self.device), target.to(self.device)
+            pred = self.forward(data)
+            test_loss = self.criterion(pred, target).item()
+            correct = (pred.argmax(1) == target).type(torch.float).sum().item()
+            return test_loss, correct
