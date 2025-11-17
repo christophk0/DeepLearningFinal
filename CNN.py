@@ -14,17 +14,8 @@ class CNN(nn.Module):
         self.resnet = resnet18(
             weights=models.ResNet18_Weights.DEFAULT if config['pretrained'] else None).to(
             self.device)
-        drop = config['num_layers_to_drop']
-        if drop > 0:
-            self.resnet.layer4 = nn.Identity()
-            if drop > 1:
-                self.resnet.layer3 = nn.Identity()
-                if drop > 2:
-                    self.resnet.layer2 = nn.Identity()
-                    if drop > 3:
-                        self.resnet.layer1 = nn.Identity()
-                        if drop > 4:
-                            self.resnet.layer0 = nn.Identity()
+        for i in range(min(config['num_layers_to_drop'], 4)):
+            setattr(self.resnet, 'layer{}'.format(4 - i), nn.Identity())
         self.resnet.fc = nn.Identity().to(self.device)
         self.freeze_pretrained_layers = config['freeze_pretrained_layers']
         if self.freeze_pretrained_layers:
