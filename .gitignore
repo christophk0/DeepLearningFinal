@@ -1,2 +1,9 @@
 /data/
 .idea/
+
+# Model checkpoints and cache files
+results/checkpoints/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

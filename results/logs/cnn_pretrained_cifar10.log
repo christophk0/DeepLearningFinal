@@ -1,0 +1,83 @@
+Experiment: cnn_pretrained_cifar10
+Start time: 2025-11-17T22:03:48.211828
+Configuration:
+{
+  "batch_size": 64,
+  "num_epochs": 10,
+  "num_workers": 4,
+  "print_batch_frequency": 10,
+  "model_type": "cnn",
+  "save_weights_path": "",
+  "seed": 42,
+  "cnn": {
+    "architecture": "resnet18",
+    "pretrained": true,
+    "freeze_pretrained_layers": false,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "num_layers_to_drop": 0,
+    "use_scheduler": true,
+    "scheduler_step_size": 30,
+    "scheduler_gamma": 0.1,
+    "grad_clip": null
+  },
+  "vision_transformer": {
+    "architecture": "vit_b_16",
+    "pretrained": true,
+    "freeze_pretrained_layers": false,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "num_encoder_layers_to_drop": 0,
+    "use_scheduler": true,
+    "scheduler_step_size": 30,
+    "scheduler_gamma": 0.1,
+    "grad_clip": null,
+    "use_local_attention": false,
+    "local_window_size": 7,
+    "embed_dim": 768,
+    "depth": 12,
+    "num_heads": 12,
+    "dropout": 0.1
+  },
+  "dataset": {
+    "name": "cifar10",
+    "data_dir": "./data",
+    "augment": true
+  },
+  "experiment_configs": {
+    "baseline": {
+      "num_epochs": 20
+    },
+    "sparse_data": {
+      "num_epochs": 30
+    },
+    "imbalanced_data": {
+      "num_epochs": 25
+    },
+    "corrupted_data": {
+      "num_epochs": 15
+    },
+    "shallow_networks": {
+      "num_epochs": 25,
+      "cnn": {
+        "num_layers_to_drop": 3
+      },
+      "vision_transformer": {
+        "num_encoder_layers_to_drop": 8
+      }
+    },
+    "local_attention": {
+      "num_epochs": 30,
+      "vision_transformer": {
+        "use_local_attention": true,
+        "local_window_size": 7,
+        "pretrained": false
+      }
+    }
+  }
+}
+--------------------------------------------------
+Epoch 0: Train Loss: 0.7617, Train Acc: 0.7408, Val Loss: 0.6752, Val Acc: 0.7647, F1: 0.7630
+Epoch 1: Train Loss: 0.7278, Train Acc: 0.7542, Val Loss: 0.6820, Val Acc: 0.7621, F1: 0.7603
+Epoch 2: Train Loss: 0.7237, Train Acc: 0.7558, Val Loss: 0.6716, Val Acc: 0.7663, F1: 0.7642
+Epoch 3: Train Loss: 0.7250, Train Acc: 0.7540, Val Loss: 0.6746, Val Acc: 0.7651, F1: 0.7632

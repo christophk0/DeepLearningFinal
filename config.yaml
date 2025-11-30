@@ -1,15 +1,79 @@
+# General experiment settings
 batch_size: 64
-num_epochs: 5
+num_epochs: 10
+num_workers: 4
 print_batch_frequency: 10
 model_type: 'vt' # 'cnn' or 'vt'
 save_weights_path: ''
+seed: 42
+
+# CNN Configuration
 cnn:
+  architecture: 'resnet18'  # 'resnet18', 'resnet34', 'resnet50'
   pretrained: true
-  freeze_pretrained_layers: true
-  learning_rate: 0.01
-  num_layers_to_drop: 2
+  freeze_pretrained_layers: false
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  num_layers_to_drop: 0
+  use_scheduler: true
+  scheduler_step_size: 30
+  scheduler_gamma: 0.1
+  grad_clip: null  # Set to a value like 1.0 to enable gradient clipping
+
+# Vision Transformer Configuration
 vision_transformer:
+  architecture: 'vit_b_16'  # 'vit_b_16', 'vit_b_32', 'vit_l_16'
   pretrained: true
-  freeze_pretrained_layers: true
-  learning_rate: 0.00001
-  num_encoder_layers_to_drop: 6
+  freeze_pretrained_layers: false
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  num_encoder_layers_to_drop: 0
+  use_scheduler: true
+  scheduler_step_size: 30
+  scheduler_gamma: 0.1
+  grad_clip: null
+  
+  # Local attention settings (only used if use_local_attention is true)
+  use_local_attention: false
+  local_window_size: 7
+  embed_dim: 768
+  depth: 12
+  num_heads: 12
+  dropout: 0.1
+
+# Dataset settings
+dataset:
+  name: 'cifar10'  # 'cifar10', 'cifar100'
+  data_dir: './data'
+  augment: true
+
+# Experiment configurations for different scenarios
+experiment_configs:
+  # Baseline experiments
+  baseline:
+    num_epochs: 20
+    
+  # Data regime experiments  
+  sparse_data:
+    num_epochs: 30  # More epochs for sparse data
+    
+  imbalanced_data:
+    num_epochs: 25
+    
+  corrupted_data:
+    num_epochs: 15
+    
+  # Architectural experiments
+  shallow_networks:
+    num_epochs: 25
+    cnn:
+      num_layers_to_drop: 3
+    vision_transformer:
+      num_encoder_layers_to_drop: 8
+      
+  local_attention:
+    num_epochs: 30
+    vision_transformer:
+      use_local_attention: true
+      local_window_size: 7
+      pretrained: false  # Local attention model is trained from scratch
