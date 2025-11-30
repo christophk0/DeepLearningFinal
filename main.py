@@ -17,6 +17,9 @@ if __name__ == '__main__':
     else:
         model = CNN(config=config['cnn'], device=device)
 
+    if config['skip_train_and_test']:
+        exit("Skipping train and test due to skip_train_and_test config")
+
     transform = transforms.Compose([transforms.Resize(224), transforms.ToTensor(),
                                     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
     training_data = datasets.CIFAR10(root='./data', train=True, transform=transform, download=True)
