@@ -1,2 +1,5 @@
 /data/
 .idea/
+runs
+data
+__pycache__
