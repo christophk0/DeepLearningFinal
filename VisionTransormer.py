@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
-from torchvision.models import vit_b_16
+from torchvision.models import vit_b_16, vit_l_16
 
 
 class VisionTransformer(nn.Module):
@@ -11,9 +11,14 @@ class VisionTransformer(nn.Module):
 
         self.device = device
 
-        self.vit = vit_b_16(
-            weights=models.ViT_B_16_Weights.DEFAULT if config['pretrained'] else None).to(
-            self.device)
+        if config['model'] == 'base':
+            self.vit = vit_b_16(
+                weights=models.ViT_B_16_Weights.DEFAULT if config['pretrained'] else None).to(
+                self.device)
+        elif config['model'] == 'large':
+            self.vit = vit_l_16(
+                weights=models.ViT_L_16_Weights.DEFAULT if config['pretrained'] else None).to(
+                self.device)
         self.vit.heads.head = nn.Identity().to(self.device)
         self.freeze_pretrained_layers = config['freeze_pretrained_layers']
         if self.freeze_pretrained_layers:
@@ -23,6 +28,9 @@ class VisionTransformer(nn.Module):
             self.vit.encoder.layers = self.vit.encoder.layers[
                 :-config['num_encoder_layers_to_drop']]
         print(self.vit)
+
+        total_params = sum(param.numel() for param in self.parameters())
+        print('Total number of parameters (excluding final linear layer): {}'.format(total_params))
 
         self.final_layer = nn.LazyLinear(10).to(self.device)
 
