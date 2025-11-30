@@ -12,9 +12,11 @@ from typing import Optional, Union, Callable, Tuple, Type, List
 import torch
 from torch import nn as nn
 from torchvision.models.resnet import Bottleneck, BasicBlock
+from torchvision.models.vision_transformer import MLPBlock, EncoderBlock
 
 _HOOK_LAYER_TYPES = (
-    Bottleneck, BasicBlock, nn.Conv2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d, nn.modules.batchnorm._BatchNorm)
+    BasicBlock, nn.Conv2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d,
+    nn.MultiheadAttention, nn.Linear, nn.LayerNorm, nn.ReLU, nn.BatchNorm2d, nn.GELU) 
 
 
 class HookManager:
@@ -96,6 +98,9 @@ class HookManager:
                 setattr(child, 'module_name', curr_name)
 
     def flatten_hook_fn(self, module: nn.Module, inp: torch.Tensor, out: torch.Tensor) -> None:
+        if isinstance(out, tuple):
+            # The actual output tensor is the first element
+            out = out[0]
         batch_size = out.size(0)
         feature = out.reshape(batch_size, -1)
         if self.calculate_gram:
