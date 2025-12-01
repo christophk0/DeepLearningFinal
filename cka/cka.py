@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Tuple, Optional, Callable, Type, Union, TYPE_CHECKING, List
 
+import matplotlib.pyplot as plt
+from mpl_toolkits import axes_grid1
 import torch
 import torch.nn as nn
 from tqdm.autonotebook import tqdm
@@ -178,3 +180,47 @@ class CKACalculator:
 
 def gram(x: torch.Tensor) -> torch.Tensor:
     return x.matmul(x.t())
+
+"""
+Following functions taken and adapted from
+https://github.com/AntixK/PyTorch-Model-Compare/blob/main/torch_cka/cka.py
+"""
+
+def export_cka_plot(
+        image_values,
+        model_1_name,
+        model_2_name,
+        save_path: str = None,
+        title: str = None,
+        fig: plt.Figure = None, 
+        ax: plt.Axes = None
+        ):
+    
+    if fig is None or ax is None:
+        fig, ax = plt.subplots()
+    im = ax.imshow(image_values, origin='lower', cmap='magma')
+    ax.set_xlabel(f"Layers {model_1_name}", fontsize=15)
+    ax.set_ylabel(f"Layers {model_2_name}", fontsize=15)
+
+    if title is not None:
+        ax.set_title(f"{title}", fontsize=18)
+    else:
+        ax.set_title(f"CKA\n{model_1_name} vs {model_2_name}", fontsize=18)
+
+    add_colorbar(im)
+    fig.tight_layout()
+
+    if save_path is not None:
+        fig.savefig(save_path, dpi=300)
+
+    fig.show()
+
+def add_colorbar(im, aspect=10, pad_fraction=0.5, **kwargs):
+    """Add a vertical color bar to an image plot."""
+    divider = axes_grid1.make_axes_locatable(im.axes)
+    width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
+    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+    current_ax = plt.gca()
+    cax = divider.append_axes("right", size=width, pad=pad)
+    plt.sca(current_ax)
+    return im.axes.figure.colorbar(im, cax=cax, **kwargs)
