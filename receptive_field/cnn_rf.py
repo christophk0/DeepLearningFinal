@@ -27,7 +27,8 @@ def get_resnet_max_distances_basic_block(layers: list[int]):
                 current_max_distance += (4 * current_stride)
             horizontal_max_distances.append(current_max_distance)
 
-    return [np.sqrt(2) * min(h, 283) for h in horizontal_max_distances]
+    # Our images are 224x224
+    return [np.sqrt(2) * min(h, 223) for h in horizontal_max_distances]
 
 def get_resnet_max_distances_bottleneck(layers: list[int]):
     # Initial layer -> 7x7 convolution with 2x2 stride
@@ -50,7 +51,8 @@ def get_resnet_max_distances_bottleneck(layers: list[int]):
                 # For layers 2-4, there is a 2x2 stride in the first block's first convolution.
                 current_stride *= 2
 
-    return [np.sqrt(2) * min(h, 283) for h in horizontal_max_distances]
+    # Our images are 224x224
+    return [np.sqrt(2) * min(h, 223) for h in horizontal_max_distances]
 
 def plot(distances, title):
     dir_name = os.path.dirname(__file__)
