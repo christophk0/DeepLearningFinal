@@ -20,11 +20,14 @@ from create_imbalanced_dataset import ImbalancedCIFAR10, create_long_tail_imbala
 from evaluate import evaluate_model, print_metrics, plot_confusion_matrix, plot_per_class_metrics
 
 
-def train_model(model, train_loader, num_epochs, device, print_freq=10):
-    """Train model and return training history"""
-    history = {'loss': [], 'epoch': []}
+def train_model(model, train_loader, val_loader, num_epochs, device, print_freq=10):
+    """Train model and return training history with validation loss"""
+    history = {'loss': [], 'val_loss': [], 'epoch': []}
+    criterion = torch.nn.CrossEntropyLoss()
     
     for epoch in range(num_epochs):
+        # Training phase
+        model.train()
         epoch_losses = []
         for batch_idx, batch in enumerate(train_loader):
             loss = model.training_step(batch)
@@ -33,26 +36,52 @@ def train_model(model, train_loader, num_epochs, device, print_freq=10):
             if batch_idx % print_freq == 0:
                 print(f"Epoch {epoch}, Batch {batch_idx}, Loss: {loss.item():.4f}")
         
-        avg_loss = sum(epoch_losses) / len(epoch_losses)
-        history['loss'].append(avg_loss)
+        avg_train_loss = sum(epoch_losses) / len(epoch_losses)
+        history['loss'].append(avg_train_loss)
+        
+        # Validation phase
+        model.eval()
+        val_losses = []
+        with torch.no_grad():
+            for batch in val_loader:
+                data, target = batch
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                loss = criterion(output, target)
+                val_losses.append(loss.item())
+        
+        avg_val_loss = sum(val_losses) / len(val_losses)
+        history['val_loss'].append(avg_val_loss)
         history['epoch'].append(epoch)
-        print(f"Epoch {epoch} completed. Average Loss: {avg_loss:.4f}")
+        print(f"Epoch {epoch} completed. Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
     
     return history
 
 
 def plot_training_curves(history_cnn, history_vit, save_path):
-    """Plot training loss curves for both models"""
+    """Plot training and validation loss curves for both models"""
     import matplotlib.pyplot as plt
     
-    plt.figure(figsize=(10, 6))
-    plt.plot(history_cnn['epoch'], history_cnn['loss'], label='CNN', marker='o')
-    plt.plot(history_vit['epoch'], history_vit['loss'], label='ViT', marker='s')
-    plt.xlabel('Epoch')
-    plt.ylabel('Training Loss')
-    plt.title('Training Loss Curves - Imbalanced Dataset')
-    plt.legend()
-    plt.grid(alpha=0.3)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Training loss
+    ax1.plot(history_cnn['epoch'], history_cnn['loss'], label='CNN Train', marker='o', linestyle='-')
+    ax1.plot(history_vit['epoch'], history_vit['loss'], label='ViT Train', marker='s', linestyle='-')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Training Loss')
+    ax1.set_title('Training Loss Curves - Imbalanced Dataset')
+    ax1.legend()
+    ax1.grid(alpha=0.3)
+    
+    # Validation loss
+    ax2.plot(history_cnn['epoch'], history_cnn['val_loss'], label='CNN Val', marker='o', linestyle='--')
+    ax2.plot(history_vit['epoch'], history_vit['val_loss'], label='ViT Val', marker='s', linestyle='--')
+    ax2.set_xlabel('Epoch')
+    ax2.set_ylabel('Validation Loss')
+    ax2.set_title('Validation Loss Curves - Imbalanced Dataset')
+    ax2.legend()
+    ax2.grid(alpha=0.3)
+    
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
@@ -140,12 +169,12 @@ def run_experiment(config_path='../config.yaml',
     
     # Train CNN
     print("\nTraining CNN...")
-    cnn_history = train_model(cnn_model, train_loader, num_epochs, device, 
+    cnn_history = train_model(cnn_model, train_loader, test_loader, num_epochs, device, 
                              print_freq=config.get('print_batch_frequency', 10))
     
     # Train ViT
     print("\nTraining ViT...")
-    vit_history = train_model(vit_model, train_loader, num_epochs, device,
+    vit_history = train_model(vit_model, train_loader, test_loader, num_epochs, device,
                              print_freq=config.get('print_batch_frequency', 10))
     
     # Evaluate models
@@ -189,7 +218,9 @@ def run_experiment(config_path='../config.yaml',
         },
         'training_history': {
             'cnn_loss': [float(x) for x in cnn_history['loss']],
-            'vit_loss': [float(x) for x in vit_history['loss']]
+            'cnn_val_loss': [float(x) for x in cnn_history['val_loss']],
+            'vit_loss': [float(x) for x in vit_history['loss']],
+            'vit_val_loss': [float(x) for x in vit_history['val_loss']]
         }
     }
     
