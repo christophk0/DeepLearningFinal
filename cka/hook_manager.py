@@ -11,11 +11,9 @@ from typing import Optional, Union, Callable, Tuple, Type, List
 
 import torch
 from torch import nn as nn
-from torchvision.models.resnet import Bottleneck, BasicBlock
-from torchvision.models.vision_transformer import MLPBlock, EncoderBlock
 
 _HOOK_LAYER_TYPES = (
-    BasicBlock, nn.Conv2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d,
+    nn.Conv2d, nn.AdaptiveAvgPool2d, nn.MaxPool2d,
     nn.MultiheadAttention, nn.Linear, nn.LayerNorm, nn.ReLU, nn.BatchNorm2d, nn.GELU) 
 
 
