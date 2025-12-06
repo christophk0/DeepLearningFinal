@@ -64,33 +64,37 @@ if __name__ == '__main__':
     parser.add_argument('--weights', type=str, default=None)
     args = parser.parse_args()
 
-    weights = None
+    vit_weights = None
     if args.weights is not None:
-        weights = torch.load(args.weights)
+        weights = torch.load(args.weights, map_location=torch.device('cpu'))
+        # We remove the head in our implementation, so replace them with 0s. They aren't relevant for attention
+        # calculations.
+        vit_weights = {'heads.head.weight': torch.zeros(1000, 768), 'heads.head.bias': torch.zeros(1000)}
+        for key, value in weights.items():
+            if key.startswith('vit.'):
+                vit_weights[key[4:]] = value
 
     if args.model == 'base':
-        if weights is None:
-            weights = models.ViT_B_16_Weights.DEFAULT
-        model = vit_b_16(weights=weights)
+        model = vit_b_16(weights=models.ViT_B_16_Weights.DEFAULT)
         patch_size = 16
         image_size = 224
         title = 'VIT-B/16'
     elif args.model == 'large':
-        if weights is None:
-            weights = models.ViT_L_16_Weights.DEFAULT
-        model = vit_l_16(weights=weights)
+        model = vit_l_16(weights=models.ViT_L_16_Weights.DEFAULT)
         patch_size = 16
         image_size = 224
         title = 'VIT-L/16'
     elif args.model == 'huge':
-        if weights is None:
-            weights = models.ViT_H_14_Weights.DEFAULT
-        model = vit_h_14(weights=weights)
+        model = vit_h_14(weights=models.ViT_H_14_Weights.DEFAULT)
         patch_size = 14
         image_size = 518
         title = 'VIT-H/14'
     else:
         raise NotImplementedError('Unsupported model type')
+
+    if vit_weights is not None:
+        title += ' (trained from scratch)'
+        model.load_state_dict(vit_weights)
 
     model.eval()
 
@@ -144,10 +148,14 @@ if __name__ == '__main__':
 
     plt.xlabel('Network depth (layer)')
     plt.ylabel('Mean attention distance (Pixels)')
+    plt.ylim(bottom=0)
     plt.title(title)
     plt.legend()
     plt.grid()
     dir_name = os.path.dirname(__file__)
-    file_name = os.path.join(dir_name, args.model + '_vit_locality.png')
+    file_name = os.path.join(dir_name, args.model + '_vit_locality')
+    if vit_weights is not None:
+        file_name += '_scratch'
+    file_name += '.png'
     plt.savefig(file_name)
     plt.show()
