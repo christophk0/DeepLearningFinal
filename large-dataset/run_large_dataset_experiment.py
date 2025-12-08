@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from CNN import CNN
 from VisionTransormer import VisionTransformer
-from evaluate import evaluate_model, print_metrics, plot_confusion_matrix, plot_per_class_metrics
+from evaluate import evaluate_model, print_metrics
 from load_coyo_dataset import load_coyo_dataset, create_train_test_split
 
 
@@ -211,6 +211,20 @@ def run_experiment(config_path='../config.yaml',
     print(f"Training samples: {len(train_dataset)}")
     print(f"Test samples: {len(test_dataset)}")
     
+    # Validate dataset sizes before creating loaders
+    if len(train_dataset) == 0:
+        raise ValueError(
+            f"❌ ERROR: Training dataset has 0 samples! Cannot proceed with training.\n"
+            f"This likely means no valid samples were found during dataset processing.\n"
+            f"Please check the dataset loading output above for details."
+        )
+    if len(test_dataset) == 0:
+        raise ValueError(
+            f"❌ ERROR: Test dataset has 0 samples! Cannot proceed with evaluation.\n"
+            f"This likely means no valid samples were found during dataset processing.\n"
+            f"Please check the dataset loading output above for details."
+        )
+    
     # Create data loaders
     train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
@@ -275,6 +289,26 @@ def run_experiment(config_path='../config.yaml',
     vit_history = train_model(vit_model, train_loader, test_loader, num_epochs, device,
                              print_freq=config.get('print_batch_frequency', 10))
     
+    # Print download statistics if available (for Coyo dataset)
+    if dataset.lower() in ['coyo', 'coyo-labeled-300m', 'coyo300m']:
+        try:
+            # Access the underlying CoyoDataset if it's wrapped in a Subset
+            underlying_dataset = train_dataset.dataset if hasattr(train_dataset, 'dataset') else train_dataset
+            if hasattr(underlying_dataset, 'get_download_stats'):
+                stats = underlying_dataset.get_download_stats()
+                if stats and stats['total_attempts'] > 0:
+                    print("\n" + "="*60)
+                    print("Image Download Statistics")
+                    print("="*60)
+                    print(f"Total download attempts: {stats['total_attempts']}")
+                    print(f"Successful downloads: {stats['successful']}")
+                    print(f"Failed downloads: {stats['failed']}")
+                    print(f"Success rate: {stats['success_rate']:.2f}%")
+                    print(f"\n⚠️  WARNING: {stats['failed']} images failed to download and were replaced with black images.")
+                    print(f"   This may significantly affect model performance, especially with {stats['success_rate']:.1f}% success rate.")
+        except Exception:
+            pass  # Silently ignore if stats not available
+    
     # Evaluate models
     print("\n" + "="*60)
     print("Evaluating CNN")
@@ -303,19 +337,13 @@ def run_experiment(config_path='../config.yaml',
             'test_loss': float(cnn_metrics['test_loss']),
             'accuracy': float(cnn_metrics['accuracy']),
             'f1_macro': float(cnn_metrics['f1_macro']),
-            'f1_weighted': float(cnn_metrics['f1_weighted']),
-            'f1_per_class': [float(x) for x in cnn_metrics['f1_per_class']],
-            'per_class_recall': [float(x) for x in cnn_metrics['per_class_recall']],
-            'per_class_precision': [float(x) for x in cnn_metrics['per_class_precision']]
+            'f1_weighted': float(cnn_metrics['f1_weighted'])
         },
         'vit_metrics': {
             'test_loss': float(vit_metrics['test_loss']),
             'accuracy': float(vit_metrics['accuracy']),
             'f1_macro': float(vit_metrics['f1_macro']),
-            'f1_weighted': float(vit_metrics['f1_weighted']),
-            'f1_per_class': [float(x) for x in vit_metrics['f1_per_class']],
-            'per_class_recall': [float(x) for x in vit_metrics['per_class_recall']],
-            'per_class_precision': [float(x) for x in vit_metrics['per_class_precision']]
+            'f1_weighted': float(vit_metrics['f1_weighted'])
         },
         'training_history': {
             'cnn_loss': [float(x) for x in cnn_history['loss']],
@@ -332,35 +360,14 @@ def run_experiment(config_path='../config.yaml',
     print("\nGenerating visualizations...")
     print(f"Saving charts to: {charts_dir}")
     
-    # Confusion matrices (for large datasets, we might want to sample or use a smaller version)
-    # For CIFAR-100, we'll create the full confusion matrix but it will be large
-    plot_confusion_matrix(
-        cnn_metrics['confusion_matrix'], 
-        class_names,
-        os.path.join(charts_dir, 'confusion_matrix_cnn.png'),
-        'CNN (ResNet)'
-    )
-    
-    plot_confusion_matrix(
-        vit_metrics['confusion_matrix'],
-        class_names,
-        os.path.join(charts_dir, 'confusion_matrix_vit.png'),
-        'Vision Transformer'
-    )
-    
-    # Per-class metrics comparison (for 100 classes, this will be a long plot)
-    plot_per_class_metrics(
-        cnn_metrics, vit_metrics, class_names,
-        os.path.join(charts_dir, 'per_class_metrics_comparison.png')
-    )
-    
-    # Training curves
+    # For large datasets, we only generate training curves
+    # Per-class metrics and confusion matrices are skipped for efficiency
     plot_training_curves(
         cnn_history, vit_history,
         os.path.join(charts_dir, 'training_curves.png')
     )
     
-    print(f"All charts saved to: {charts_dir}")
+    print(f"Training curves saved to: {charts_dir}")
     
     # Summary comparison
     print("\n" + "="*60)
