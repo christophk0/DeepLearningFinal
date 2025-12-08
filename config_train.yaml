@@ -1,9 +1,8 @@
 batch_size: 64
-num_epochs: 8
+num_epochs: 5
 print_batch_frequency: 10
 model_type: 'vt' # 'cnn' or 'vt'
-save_weights_path: 'skipped_residuals_9.pth'
-save_checkpoint_path: ''
+save_weights_path: ''
 skip_train_and_test: false
 cnn:
   pretrained: true
@@ -12,10 +11,8 @@ cnn:
   num_layers_to_drop: 2
   model: 18 # 18 or 34 or 50 or 101 or 152
 vision_transformer:
-  pretrained: false
-  freeze_pretrained_layers: false
+  pretrained: true
+  freeze_pretrained_layers: true
   learning_rate: 0.00001
-  num_encoder_layers_to_drop: 0
+  num_encoder_layers_to_drop: 6
   model: 'base' # 'base' or 'large'
-  drop_residual_connections: 9
-  path_to_weights: '' # '' # path to pretrained weights
