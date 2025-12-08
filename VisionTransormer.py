@@ -3,6 +3,7 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
 from torchvision.models import vit_b_16, vit_l_16
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 
 class VisionTransformer(nn.Module):
@@ -38,6 +39,9 @@ class VisionTransformer(nn.Module):
         self.optimizer = optim.Adam(
             self.final_layer.parameters() if self.freeze_pretrained_layers else self.parameters(),
             lr=config['learning_rate'])
+        self.scheduler = None
+        if config['enable_cosine_scheduler']:
+            self.scheduler = CosineAnnealingLR(self.optimizer, T_max=config['cosine_scheduler_max'])
 
     def forward(self, x):
         x = self.vit(x)
