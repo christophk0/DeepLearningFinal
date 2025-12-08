@@ -10,9 +10,13 @@ cnn:
   learning_rate: 0.01
   num_layers_to_drop: 2
   model: 18 # 18 or 34 or 50 or 101 or 152
+  enable_cosine_scheduler: false
+  cosine_scheduler_max: 5
 vision_transformer:
   pretrained: true
   freeze_pretrained_layers: true
   learning_rate: 0.00001
   num_encoder_layers_to_drop: 6
   model: 'base' # 'base' or 'large'
+  enable_cosine_scheduler: false
+  cosine_scheduler_max: 5
