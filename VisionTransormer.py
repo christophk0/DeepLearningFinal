@@ -59,6 +59,9 @@ class VisionTransformer(nn.Module):
         self.optimizer = optim.Adam(
             self.final_layer.parameters() if self.freeze_pretrained_layers else self.parameters(),
             lr=config['learning_rate'])
+        self.scheduler = None
+        if config['enable_cosine_scheduler']:
+            self.scheduler = CosineAnnealingLR(self.optimizer, T_max=config['cosine_scheduler_max'])
 
     def forward(self, x):
         x = self.vit(x)

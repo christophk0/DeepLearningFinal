@@ -41,6 +41,8 @@ if __name__ == '__main__':
             test_result = model.test_step(batch)
             test_loss += test_result[0]
             correct += test_result[1]
+        if model.scheduler:
+            model.scheduler.step()
         test_loss /= len(test_loader)
         correct /= len(test_data)
         print(f"Test Error for Epoch {epoch}: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
