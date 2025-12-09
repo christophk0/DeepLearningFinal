@@ -28,6 +28,8 @@ if __name__ == '__main__':
     test_data = datasets.CIFAR10(root='./data', train=False, transform=transform, download=True)
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=config['batch_size'], shuffle=True)
 
+    save_checkpoint = config['save_checkpoint_path']
+
     for epoch in range(num_epochs):
         for batch_idx, batch in enumerate(training_loader):
             loss = model.training_step(batch)
@@ -44,6 +46,11 @@ if __name__ == '__main__':
         test_loss /= len(test_loader)
         correct /= len(test_data)
         print(f"Test Error for Epoch {epoch}: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
+        if save_checkpoint != '':
+            torch.save(model.state_dict(), f'epoch_{epoch}_'+save_checkpoint)
+            print("Checkpoint saved to epoch_{epoch}_{save_checkpoint}")
+
     save_weights = config['save_weights_path']
     if save_weights != '':
         torch.save(model.state_dict(), save_weights)

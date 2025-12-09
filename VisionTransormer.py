@@ -3,8 +3,20 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.optim as optim
 from torchvision.models import vit_b_16, vit_l_16
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from types import MethodType
 
+
+def modified_block_forward(self, input: torch.Tensor):
+    # Standard torchvision checks
+    torch._assert(input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}")
+
+    x = self.ln_1(input)
+    x, _ = self.self_attention(x, x, x, need_weights=False)
+    x = self.dropout(x)
+
+    y = self.ln_2(x)
+    y = self.mlp(y)
+    return y
 
 class VisionTransformer(nn.Module):
     def __init__(self, config, device):
@@ -28,12 +40,20 @@ class VisionTransformer(nn.Module):
         if config['num_encoder_layers_to_drop'] > 0:
             self.vit.encoder.layers = self.vit.encoder.layers[
                 :-config['num_encoder_layers_to_drop']]
+        if config.get('drop_residual_connections', 0) > 0:
+            target_block = self.vit.encoder.layers[config.get('drop_residual_connections', 0)]
+            print(f"Dropping residual connections in block {config.get('drop_residual_connections', 0)}")
+            target_block.forward = MethodType(modified_block_forward, target_block)
         print(self.vit)
 
         total_params = sum(param.numel() for param in self.parameters())
         print('Total number of parameters (excluding final linear layer): {}'.format(total_params))
 
         self.final_layer = nn.LazyLinear(10).to(self.device)
+        
+        if config.get('path_to_weights', '') != '':
+            print(f"Loading weights from {config.get('path_to_weights')}")
+            self.load_state_dict(torch.load(config.get('path_to_weights')))
 
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(
